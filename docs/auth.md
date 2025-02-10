@@ -2,15 +2,25 @@
 
 !!! warning "PiKVM comes with the following default passwords"
 
-    * **Linux admin** (SSH, console, etc.): user `root`, password `root`.
-    * **PiKVM Web Interface** ([API](api.md), [VNC](vnc.md)...): user `admin`, password `admin`, no 2FA code.
+    * **Linux OS-level admin** (SSH, console...):
+        * Username: `root`
+        * Password: `root`
 
-    **These are two separate entities with independent accounts.**
+    * **KVM user** (Web Interface, [API](api.md), [VNC](vnc.md)...):
+        * Username: `admin`
+        * Password: `admin`
+        * No 2FA code
+
+    **They are two separate entities** with independent passwords.**
 
 !!! note "There is another special Linux user: `kvmd-webterm`"
     It can't be used for login or remote access to PiKVM OS and has the non-privileged rights in the OS.
     Password access and `sudo` is disabled for it. It is used only for launching the Web Terminal.
     These restrictions are set for security reasons.
+
+**Don't forget to change BOTH passwords on the new device.**
+
+This page describes how to do this and enable two-factor authentication.
 
 *Changing the [VNCAuth passkey](vnc.md) and [IPMI password](ipmi.md) described in the relevant documents*.
 
@@ -39,7 +49,7 @@ To obtain it in the Web Terminal, type `su -` and then enter the `root` user pas
     [root@pikvm ~]# ro
     ```
 
-    For your own access to PiKVM OS, you will still have SSH.
+    For your own access to PiKVM OS, you still have SSH.
 
 
 -----
@@ -67,22 +77,26 @@ are stored encrypted in the `/etc/kvmd/htpasswd` file. To manage them, there is 
 [root@pikvm ~]# ro
 ```
 
-Please note that `admin` is a name of a default user. It is possible to create several different users
-with different passwords to access the Web UI, but keep in mind that they all have the same rights:
+The `admin` is a name of a default user.
 
-```console
-[root@pikvm ~]# kvmd-htpasswd set <user> # Sets a new user with password
-[root@pikvm ~]# kvmd-htpasswd list # Show the list of users
-[root@pikvm ~]# kvmd-htpasswd del <user> # Removes/deletes a user
-```
+??? example "Step by step: Add KVM users"
 
-At the moment there is no way to create any ACL for different KVM users.
+    It is possible to create several different KVM users with different passwords to access
+    the Web UI and VNC, but keep in mind that they all have the same rights:
+
+    ```console
+    [root@pikvm ~]# kvmd-htpasswd set <user> # Sets a new user with password
+    [root@pikvm ~]# kvmd-htpasswd list # Show the list of users
+    [root@pikvm ~]# kvmd-htpasswd del <user> # Removes/deletes a user
+    ```
+
+    At the moment there is no way to create any ACL for different KVM users.
 
 
 -----
 ## Two-factor authentication
 
-This is a new method of strengthening the protection of PiKVM, available since `KVM >= 3.196`.
+The 2FA a new method of strengthening the protection of PiKVM, available since `KVM >= 3.196`.
 It is strongly recommended to enable it if you expose the PiKVM in the big and scary Internet.
 
 !!! warning
@@ -106,6 +120,7 @@ It is strongly recommended to enable it if you expose the PiKVM in the big and s
         [Android](https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2)). It will generate one-time access codes.
 
     4. Create a secret for one-time codes on PiKVM:
+
        ```console
        [root@pikvm ~]# rw
        [root@pikvm ~]# kvmd-totp init
@@ -129,32 +144,38 @@ To disable 2FA and remove the secret, use command `kvmd-totp del`.
 
 
 ----
-## Disable authentication
-If necessary, you can disable authentication for the Web UI.
+## Disabling authenticationa
+
+If necessary, you can disable authentication for KVM access (Web UI, VNC, etc. except SSH).
 
 !!! warning
 
-    Don't do this on untrusted networks and optionally disable the Web Terminal so as not to open the shell access to PiKVM console.
+    Don't do this in untrusted networks, because you can give a potential attacker access to your target machine.
+
+    If you really need this, please consider to disable the Web Terminal so as not to open the shell access to PiKVM console.
     You still can use SSH to access to the console.
 
-1. Switch filesystem to read-write mode:
 
-    ```
-    [root@pikvm ~]# rw
-    ```
+??? example "Step by step: Disabling authentication"
 
-2. Edit the file `/etc/kvmd/override.yaml`:
+    1. Switch filesystem to read-write mode:
 
-    ```yaml
-    kvmd:
-	    auth:
-		    enabled: false
-    ```
+        ```console
+        [root@pikvm ~]# rw
+        ```
 
-3. Restart `kvmd`, optionally disable web terminal switch filesystem to read-only mode:
+    2. Edit the file `/etc/kvmd/override.yaml`:
 
-    ```
-    [root@pikvm ~]# systemctl restart kvmd
-    [root@pikvm ~]# systemctl disable --now kvmd-webterm  # Optional if you have SSH access
-    [root@pikvm ~]# ro
-    ```
+        ```yaml
+        kvmd:
+            auth:
+                enabled: false
+        ```
+
+    3. Restart `kvmd`, optionally disable web terminal switch filesystem to read-only mode:
+
+        ```console
+        [root@pikvm ~]# systemctl restart kvmd
+        [root@pikvm ~]# systemctl disable --now kvmd-webterm  # Optional if you have SSH access
+        [root@pikvm ~]# ro
+        ```
